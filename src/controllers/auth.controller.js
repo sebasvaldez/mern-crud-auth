@@ -30,6 +30,54 @@ export const register = async (req, res) => {
   }
 };
 
-export const login = (req, res) => {
-  res.send("login");
+export const login = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const userFound = await User.findOne({ email });
+
+    if (!userFound) {
+      return res.status(400).json({ message: "Usuario no encontrado" });
+    }
+
+    const isMatch = await bcrypt.compare(password, userFound.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Contraseña incorrecta" });
+    }
+
+    //creacion del token
+    const token = await createAccesToken({ id: userFound._id });
+
+    res.cookie("token", token);
+    res.json({
+      _id: userFound._id,
+      username: userFound.username,
+      email: userFound.email,
+      createAt: userFound.createdAt,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const logOut = async (req, res) => {
+  res.cookie("token", "", { expires: new Date(0) });
+
+  return res.sendStatus(200);
+};
+
+export const profile = async (req, res) => {
+  const userFound = await User.findById(req.user.id);
+
+  if (!userFound)
+    return res.status(400).json({ message: "Usuario no encontrado" });
+
+  return res.json({
+    id: userFound._id,
+    username: userFound.username,
+    email: userFound.email,
+    createAt: userFound.createdAt,
+    updateAt: userFound.updatedAt,
+  });
 };
