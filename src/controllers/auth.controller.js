@@ -2,11 +2,17 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { createAccesToken } from "../libs/jwt.js";
 
+
 //registro de nuevo usuario
 export const register = async (req, res) => {
   const { username, email, password } = req.body;
 
   try {
+    const userFound = await User.findOne({ email });
+    if (userFound) {
+      return res.status(400).json(["El email ya esta registrado"]);
+    }
+
     const passwordHash = await bcrypt.hash(password, 10); //encripta la contraseña con 10 vueltas de encriptacion
     const newUser = new User({
       username,
@@ -37,13 +43,13 @@ export const login = async (req, res) => {
     const userFound = await User.findOne({ email });
 
     if (!userFound) {
-      return res.status(400).json({ message: "Usuario no encontrado" });
+      return res.status(400).json(["Usuario no encontrado" ]);
     }
 
     const isMatch = await bcrypt.compare(password, userFound.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Contraseña incorrecta" });
+      return res.status(400).json(["Contraseña incorrecta" ]);
     }
 
     //creacion del token
@@ -71,7 +77,7 @@ export const profile = async (req, res) => {
   const userFound = await User.findById(req.user.id);
 
   if (!userFound)
-    return res.status(400).json({ message: "Usuario no encontrado" });
+    return res.status(400).json(["Usuario no encontrado"]);
 
   return res.json({
     id: userFound._id,
