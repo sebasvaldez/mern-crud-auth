@@ -1,7 +1,8 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { createAccesToken } from "../libs/jwt.js";
-
+import  jwt  from "jsonwebtoken";
+import { TOKEN_SECRET } from "../config.js";
 
 //registro de nuevo usuario
 export const register = async (req, res) => {
@@ -24,7 +25,7 @@ export const register = async (req, res) => {
     //creacion del token
     const token = await createAccesToken({ id: userSaved._id });
 
-    res.cookie("token", token);
+    res.cookie("token");
     res.json({
       _id: userSaved._id,
       username: userSaved.username,
@@ -43,13 +44,13 @@ export const login = async (req, res) => {
     const userFound = await User.findOne({ email });
 
     if (!userFound) {
-      return res.status(400).json(["Usuario no encontrado" ]);
+      return res.status(400).json(["Usuario no encontrado"]);
     }
 
     const isMatch = await bcrypt.compare(password, userFound.password);
 
     if (!isMatch) {
-      return res.status(400).json(["Contraseña incorrecta" ]);
+      return res.status(400).json(["Contraseña incorrecta"]);
     }
 
     //creacion del token
@@ -76,8 +77,7 @@ export const logOut = async (req, res) => {
 export const profile = async (req, res) => {
   const userFound = await User.findById(req.user.id);
 
-  if (!userFound)
-    return res.status(400).json(["Usuario no encontrado"]);
+  if (!userFound) return res.status(400).json(["Usuario no encontrado"]);
 
   return res.json({
     id: userFound._id,
@@ -85,5 +85,26 @@ export const profile = async (req, res) => {
     email: userFound.email,
     createAt: userFound.createdAt,
     updateAt: userFound.updatedAt,
+  });
+};
+
+
+export const verifyToken = async (req, res) => {
+  const {token}= req.cookies;
+  if(!token) return res.status(401).json(["No hay token"]);
+
+
+  jwt.verify(token, TOKEN_SECRET, async (err,user)=>{
+    if(err) return res.status(401).json(["Token no valido"]);
+
+   const userFound= await User.findById(user.id)
+   if(!userFound) return res.status(401).json(["Usuario no encontrado"]);
+
+   return res.json({
+    id: userFound._id,
+    username: userFound.username,
+    email: userFound.email,
+    });
+    
   });
 };
